@@ -13,6 +13,8 @@ import Config
 config :festify,
   ecto_repos: [Festify.Repo]
 
+config :festify, Festify.Repo, migration_timestamps: [type: :utc_datetime_usec]
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails
