@@ -101,4 +101,17 @@ defmodule FestifyPromotion.VenuesTest do
       end
     end
   end
+
+  describe "when deleting venue" do
+    test "venue is not returned" do
+      global_id = Controls.Id.example()
+
+      Venues.Controls.VenueInfo.New.example(global_id: global_id)
+      |> Venues.save_venue()
+
+      Venues.delete_venue(global_id)
+
+      refute Venues.get_venue(global_id)
+    end
+  end
 end

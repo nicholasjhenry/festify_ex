@@ -8,10 +8,13 @@ defmodule FestifyPromotion.Venues do
 
   def get_venue(global_id) do
     Venue
-    |> Repo.get_by!(global_id: global_id)
+    |> not_removed
+    |> Repo.get_by(global_id: global_id)
     |> Repo.preload([:descriptions])
     |> to_venue_info
   end
+
+  defp to_venue_info(nil), do: nil
 
   defp to_venue_info(venue) do
     last_venue_description = find_last_venue_description(venue)
@@ -46,6 +49,15 @@ defmodule FestifyPromotion.Venues do
     |> Repo.transaction()
   end
 
+  def delete_venue(global_id) do
+    venue = Repo.get_by(Venue, global_id: global_id)
+
+    venue
+    |> Ecto.build_assoc(:removed, removed_at: DateTime.utc_now())
+    |> IO.inspect()
+    |> Repo.insert(on_conflict: :nothing, conflict_target: :venue_id)
+  end
+
   defp maybe_insert_venue_description(venue_info, repo, %{venue: venue}) do
     last_venue_description =
       venue
@@ -77,6 +89,10 @@ defmodule FestifyPromotion.Venues do
     venue.descriptions
     |> Enum.sort(&(NaiveDateTime.compare(&1.inserted_at, &2.inserted_at) != :lt))
     |> List.first(%VenueDescription{})
+  end
+
+  defp not_removed(query) do
+    from venue in query, left_join: removed in assoc(venue, :removed), where: is_nil(removed.id)
   end
 
   defp get_ticks(date_time) do
