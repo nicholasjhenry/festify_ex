@@ -8,7 +8,7 @@ defmodule FestifyPromotion.Venues.Controls do
         global_id: Ecto.UUID.generate(),
         name: "Jane Smith",
         city: "Auckland",
-        last_modified: Controls.Time.example()
+        last_modified_ticks: Controls.Time.example() |> DateTime.to_unix()
       }
 
       attrs = Enum.into(attrs, defaults)
