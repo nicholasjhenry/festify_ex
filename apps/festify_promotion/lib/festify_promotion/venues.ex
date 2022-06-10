@@ -16,16 +16,12 @@ defmodule FestifyPromotion.Venues do
   defp to_venue_info(venue) do
     last_venue_description = find_last_venue_description(venue)
 
-    last_modified_ticks =
-      if last_venue_description.inserted_at do
-        DateTime.to_gregorian_seconds(last_venue_description.inserted_at)
-      else
-        {0, 0}
-      end
+    last_modified_ticks = get_ticks(last_venue_description.inserted_at)
 
     %VenueInfo{
       global_id: venue.global_id,
       name: last_venue_description.name,
+      city: last_venue_description.city,
       last_modified_ticks: last_modified_ticks
     }
   end
@@ -56,14 +52,22 @@ defmodule FestifyPromotion.Venues do
       |> Repo.preload([:descriptions])
       |> find_last_venue_description()
 
-    if last_venue_description.name != venue_info.name &&
+    modified_ticks = get_ticks(last_venue_description.inserted_at)
+
+    venue_description = %VenueDescription{
+      venue_id: venue.id,
+      name: venue_info.name,
+      city: venue_info.city
+    }
+
+    if venue_info.last_modified_ticks != {0, 0} &&
+         modified_ticks != venue_info.last_modified_ticks do
+      raise Ecto.StaleEntryError, action: :insert, changeset: %{data: venue_description}
+    end
+
+    if last_venue_description.name != venue_info.name ||
          last_venue_description.city != venue_info.city do
-      %VenueDescription{
-        venue_id: venue.id,
-        name: venue_info.name,
-        city: venue_info.city
-      }
-      |> repo.insert()
+      repo.insert(venue_description)
     else
       {:ok, last_venue_description}
     end
@@ -73,5 +77,13 @@ defmodule FestifyPromotion.Venues do
     venue.descriptions
     |> Enum.sort(&(NaiveDateTime.compare(&1.inserted_at, &2.inserted_at) != :lt))
     |> List.first(%VenueDescription{})
+  end
+
+  defp get_ticks(date_time) do
+    if date_time do
+      DateTime.to_gregorian_seconds(date_time)
+    else
+      {0, 0}
+    end
   end
 end
